@@ -1,0 +1,14 @@
+{
+  "servers": {
+    "shadcn": {
+      "command": "npx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
+    },
+    "whatsapp": {
+      "url": "http://localhost:8080/sse"
+    }
+  }
+}
