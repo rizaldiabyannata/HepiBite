@@ -5,6 +5,10 @@ import type {
   Product as PrismaProduct,
   ProductVariant as PrismaProductVariant,
 } from "@prisma/client";
+
+// Force dynamic rendering to prevent build-time database access
+export const dynamic = 'force-dynamic';
+
 // Local types for the server -> client data shape (kept minimal to avoid coupling)
 type ProductVariantForClient = Omit<PrismaProductVariant, "price"> & {
   price: number;

@@ -14,6 +14,9 @@ import type {
   Delivery as PrismaDelivery,
 } from "@prisma/client";
 
+// Force dynamic rendering to prevent build-time database access
+export const dynamic = 'force-dynamic';
+
 // Local shapes used to avoid direct Prisma type coupling in the UI layer
 type DeliveryForClient = {
   recipientName?: string | null;
