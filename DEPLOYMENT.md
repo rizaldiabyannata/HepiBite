@@ -44,12 +44,15 @@ Make sure these are set in Dokploy:
 ### Troubleshooting:
 
 **Error: "Cannot use import statement outside a module"**
+
 - Don't run `node seed.ts` directly
 - Use `npm run seed:admin` instead
 
 **Error: "Table does not exist"**
+
 - Run migrations first: `npx prisma migrate deploy`
 
 **Error: "Database connection failed"**
+
 - Check `DATABASE_URL` environment variable
 - Ensure database is accessible from the container
