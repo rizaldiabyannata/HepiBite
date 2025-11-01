@@ -6,13 +6,8 @@ import type {
   ProductVariant as PrismaProductVariant,
 } from "@prisma/client";
 // Local types for the server -> client data shape (kept minimal to avoid coupling)
-type ProductVariantForClient = {
-  id: string;
-  name: string;
-  sku: string;
+type ProductVariantForClient = Omit<PrismaProductVariant, "price"> & {
   price: number;
-  stock: number;
-  productId: string;
 };
 
 type ProductWithVariants = Omit<PrismaProduct, "variants"> & {
