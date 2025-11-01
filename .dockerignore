@@ -1,0 +1,16 @@
+Dockerfile
+.dockerignore
+.nixpacksignore
+.git
+.gitignore
+README.md
+.next
+.cache
+dist
+node_modules
+npm-debug.log
+.env*.local
+.vscode
+.idea
+*.log
+tsconfig.tsbuildinfo
