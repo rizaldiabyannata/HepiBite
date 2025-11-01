@@ -38,9 +38,8 @@ export function LoginForm({
         const data = await res.json().catch(() => ({}));
         setError(data.error || "Login failed");
       } else {
-        // Redirect after short delay to allow cookie to set
-        router.replace(next);
-        router.refresh();
+        // Use window.location for more reliable redirect after login
+        window.location.href = next;
       }
     } catch (err: unknown) {
       const message =

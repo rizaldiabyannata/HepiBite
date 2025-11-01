@@ -42,9 +42,14 @@ export async function verifyToken(token: string): Promise<JwtPayload | null> {
 
 export function setAuthCookieOnResponse(res: NextResponse, token: string) {
   const oneWeek = 7 * 24 * 60 * 60;
+  // Use COOKIE_SECURE env var if set, otherwise check NODE_ENV
+  const isSecure = process.env.COOKIE_SECURE 
+    ? process.env.COOKIE_SECURE === 'true' 
+    : process.env.NODE_ENV === 'production';
+  
   res.cookies.set(AUTH_COOKIE_NAME, token, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecure,
     sameSite: 'lax',
     path: '/',
     maxAge: oneWeek,
@@ -52,9 +57,13 @@ export function setAuthCookieOnResponse(res: NextResponse, token: string) {
 }
 
 export function clearAuthCookieOnResponse(res: NextResponse) {
+  const isSecure = process.env.COOKIE_SECURE 
+    ? process.env.COOKIE_SECURE === 'true' 
+    : process.env.NODE_ENV === 'production';
+    
   res.cookies.set(AUTH_COOKIE_NAME, '', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: isSecure,
     sameSite: 'lax',
     path: '/',
     maxAge: 0,
