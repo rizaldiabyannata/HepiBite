@@ -7,7 +7,7 @@ import type {
 } from "@prisma/client";
 
 // Force dynamic rendering to prevent build-time database access
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 // Local types for the server -> client data shape (kept minimal to avoid coupling)
 type ProductVariantForClient = Omit<PrismaProductVariant, "price"> & {
@@ -21,15 +21,20 @@ type ProductWithVariants = Omit<PrismaProduct, "variants"> & {
 async function getProducts(): Promise<
   (PrismaProduct & { variants: PrismaProductVariant[] })[]
 > {
-  const products = await prisma.product.findMany({
-    include: {
-      variants: true,
-    },
-    orderBy: {
-      name: "asc",
-    },
-  });
-  return products;
+  try {
+    const products = await prisma.product.findMany({
+      include: {
+        variants: true,
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+    return products;
+  } catch (error) {
+    console.error("Error fetching products:", error);
+    return [];
+  }
 }
 
 export default async function PemesananPage() {

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import prisma from "@/lib/prisma";
 import { ArrowRight, ShoppingBag } from "lucide-react";
 import SiteHeader from "@/components/SiteHeader";
+import type { Product as PrismaProduct } from "@prisma/client";
 // Interfaces for product data fetched from prisma
 interface ProductImage {
   id: string;
@@ -21,26 +22,33 @@ interface ProductWithImages {
 }
 // The page is a server component, allowing for direct data fetching.
 export default async function Home() {
-  // Fetch featured products from the database.
-  const products = await prisma.product.findMany({
-    take: 4,
-    include: {
-      images: {
-        where: { isMain: true },
-        take: 1,
-      },
-    },
-    orderBy: {
-      name: "asc",
-    },
-  });
+  // Fetch featured products from the database with error handling
+  let products: (PrismaProduct & { images: ProductImage[] })[] = [];
+  let partners: { id: string; name: string }[] = [];
 
-  const partners = await prisma.partner.findMany({
-    take: 4,
-    orderBy: {
-      name: "asc",
-    },
-  });
+  try {
+    products = await prisma.product.findMany({
+      take: 4,
+      include: {
+        images: {
+          where: { isMain: true },
+          take: 1,
+        },
+      },
+      orderBy: {
+        name: "asc",
+      },
+    });
+
+    partners = await prisma.partner.findMany({
+      take: 4,
+      orderBy: {
+        name: "asc",
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching data:", error);
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-stone-50 dark:bg-neutral-950 text-stone-800 dark:text-stone-200">

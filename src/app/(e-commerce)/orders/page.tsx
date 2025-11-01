@@ -15,7 +15,7 @@ import type {
 } from "@prisma/client";
 
 // Force dynamic rendering to prevent build-time database access
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
 
 // Local shapes used to avoid direct Prisma type coupling in the UI layer
 type DeliveryForClient = {
@@ -35,15 +35,20 @@ type OrderForClient = {
 async function getOrders(): Promise<
   (PrismaOrder & { delivery: PrismaDelivery | null })[]
 > {
-  const orders = await prisma.order.findMany({
-    include: {
-      delivery: true,
-    },
-    orderBy: {
-      orderDate: "desc",
-    },
-  });
-  return orders;
+  try {
+    const orders = await prisma.order.findMany({
+      include: {
+        delivery: true,
+      },
+      orderBy: {
+        orderDate: "desc",
+      },
+    });
+    return orders;
+  } catch (error) {
+    console.error("Error fetching orders:", error);
+    return [];
+  }
 }
 
 export default async function OrdersPage() {
@@ -83,7 +88,14 @@ export default async function OrdersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {orders.map((order) => (
+              {orders.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Belum ada pesanan. Database mungkin belum diinisialisasi atau belum ada data.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                orders.map((order) => (
                 <TableRow key={order.id}>
                   <TableCell className="font-medium">
                     {order.orderNumber}
@@ -105,7 +117,8 @@ export default async function OrdersPage() {
                     {order.delivery ? order.delivery.recipientName : "N/A"}
                   </TableCell>
                 </TableRow>
-              ))}
+              ))
+              )}
             </TableBody>
           </Table>
         </div>
