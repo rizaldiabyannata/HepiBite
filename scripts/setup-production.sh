@@ -5,6 +5,6 @@ echo "🔄 Running Prisma migrations..."
 npx prisma migrate deploy
 
 echo "🌱 Seeding database with admin user..."
-npm run seed:admin
+node prisma/seed.js
 
 echo "✅ Production setup complete!"
