@@ -25,6 +25,10 @@ export default async function Home() {
   const products = await prisma.product.findMany({
     take: 4,
     include: {
+      // fetch the first variant (if any) so we can use its image
+      variants: {
+        take: 1,
+      },
       images: {
         where: { isMain: true },
         take: 1,

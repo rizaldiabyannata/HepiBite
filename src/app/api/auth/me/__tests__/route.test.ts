@@ -1,6 +1,6 @@
 import { GET } from '../route';
 import prisma from '@/lib/prisma';
-import { getAuthCookie, verifyToken, JwtPayload } from '@/lib/auth';
+import { getAuthCookie, verifyToken, AuthUser } from '@/lib/auth';
 import { DeepMockProxy } from 'jest-mock-extended';
 import { PrismaClient } from '@prisma/client';
 
@@ -27,8 +27,8 @@ describe('API /auth/me', () => {
     updatedAt: new Date(),
   };
 
-  const mockJwtPayload: JwtPayload = {
-    sub: mockAdmin.id,
+  const mockAuthUser: AuthUser = {
+    id: mockAdmin.id,
     email: mockAdmin.email,
     role: mockAdmin.role,
   };
@@ -40,7 +40,7 @@ describe('API /auth/me', () => {
   it('should return 200 and user data for a valid token', async () => {
     // Arrange
     mockedGetAuthCookie.mockResolvedValue('fake-jwt-token');
-    mockedVerifyToken.mockResolvedValue(mockJwtPayload);
+    mockedVerifyToken.mockResolvedValue(mockAuthUser);
     prismaMock.admin.findUnique.mockResolvedValue(mockAdmin);
 
     // Act
@@ -84,7 +84,7 @@ describe('API /auth/me', () => {
   it('should return 401 if user from token is not found in DB', async () => {
     // Arrange
     mockedGetAuthCookie.mockResolvedValue('valid-token-for-deleted-user');
-    mockedVerifyToken.mockResolvedValue(mockJwtPayload);
+    mockedVerifyToken.mockResolvedValue(mockAuthUser);
     prismaMock.admin.findUnique.mockResolvedValue(null); // User not found
 
     // Act
@@ -99,7 +99,7 @@ describe('API /auth/me', () => {
   it('should return 500 if database lookup fails', async () => {
     // Arrange
     mockedGetAuthCookie.mockResolvedValue('fake-jwt-token');
-    mockedVerifyToken.mockResolvedValue(mockJwtPayload);
+    mockedVerifyToken.mockResolvedValue(mockAuthUser);
     prismaMock.admin.findUnique.mockRejectedValue(new Error('DB Error'));
 
     // Suppress console.error for this error test

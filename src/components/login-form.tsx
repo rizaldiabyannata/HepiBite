@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, FormEvent } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 export function LoginForm({
   className,
@@ -28,20 +29,28 @@ export function LoginForm({
     if (loading) return;
     setError(null);
     setLoading(true);
+
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error || "Login failed");
-      } else {
-        // Redirect after short delay to allow cookie to set
-        router.replace(next);
-        router.refresh();
+      const supabase = createClient();
+      const { data, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+      if (signInError) {
+        setError(signInError.message);
+        return;
       }
+
+      if (!data.user) {
+        setError("Login failed - no user data returned");
+        return;
+      }
+
+      // Redirect to the intended destination
+      router.replace(next);
+      router.refresh();
     } catch (err: unknown) {
       const message =
         err instanceof Error ? err.message : String(err ?? "Unexpected error");

@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
-import bcrypt from 'bcrypt';
+import { signInWithPassword, signUp } from '@/lib/auth';
 import { loginSchema } from '@/lib/validation';
-import { signToken, setAuthCookieOnResponse } from '@/lib/auth';
 
 /**
  * @openapi
@@ -57,20 +56,49 @@ export async function POST(request: Request) {
 
     const { email, password } = parsed.data;
 
+    // First check if admin exists in database for role information
     const admin = await prisma.admin.findUnique({ where: { email } });
     if (!admin) {
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
 
-    const match = await bcrypt.compare(password, admin.password);
-    if (!match) {
+    // Attempt to sign in with Supabase Auth
+    try {
+      const result = await signInWithPassword(email, password);
+
+      return NextResponse.json({
+        id: result.user?.id,
+        name: admin.name,
+        email: admin.email,
+        role: admin.role
+      });
+    } catch (error: any) {
+      // If Supabase auth fails, try to migrate the user
+      if (error.message?.includes('Invalid login credentials') || error.message?.includes('Email not confirmed')) {
+        try {
+          // User doesn't exist in Supabase, create them
+          await signUp(email, password, {
+            name: admin.name,
+            role: admin.role
+          });
+
+          // Try signing in again after signup
+          const result = await signInWithPassword(email, password);
+
+          return NextResponse.json({
+            id: result.user?.id,
+            name: admin.name,
+            email: admin.email,
+            role: admin.role,
+            migrated: true
+          });
+        } catch (signUpError: any) {
+          return NextResponse.json({ error: 'Failed to migrate user to Supabase Auth' }, { status: 500 });
+        }
+      }
+
       return NextResponse.json({ error: 'Invalid email or password' }, { status: 401 });
     }
-
-    const token = await signToken({ sub: String(admin.id), email: admin.email, role: admin.role });
-    const res = NextResponse.json({ name: admin.name, email: admin.email, role: admin.role });
-    setAuthCookieOnResponse(res, token);
-    return res;
   } catch (error) {
     console.error(error);
     return NextResponse.json({ error: 'Failed to login' }, { status: 500 });

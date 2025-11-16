@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -45,15 +46,16 @@ export function NavUser({
     if (loggingOut) return;
     setLoggingOut(true);
     try {
-      const res = await fetch("/api/auth/logout", { method: "POST" });
-      if (!res.ok) {
-        // Even if server fails, force client redirect and let cookie expire later.
-        console.warn("Logout API failed", await res.text());
+      const supabase = createClient();
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        console.warn("Logout error", error);
       }
     } catch (e) {
       console.warn("Logout request error", e);
     } finally {
-      // Navigate to login page (middleware will also redirect if cookie still around)
+      // Navigate to login page
       router.replace("/login");
       router.refresh();
       setLoggingOut(false);

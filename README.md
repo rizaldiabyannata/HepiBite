@@ -118,6 +118,37 @@ chore/update-eslint
 
 ## Panduan Menjalankan Project (Development)
 
+### Persiapan Supabase
+
+1. **Buat Project Supabase**
+   - Kunjungi [supabase.com](https://supabase.com) dan buat akun
+   - Buat project baru
+   - Catat URL dan API keys dari Settings > API
+
+2. **Konfigurasi Environment**
+   Salin file `.env.example` ke `.env` dan isi dengan kredensial Supabase:
+
+   ```bash
+   cp .env.example .env
+   ```
+
+   Pastikan variabel berikut terisi:
+   - `NEXT_PUBLIC_SUPABASE_URL`
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `SUPABASE_SERVICE_ROLE_KEY`
+   - `POSTGRES_PRISMA_URL` (dari Database > Settings)
+
+3. **Buat Storage Bucket**
+   - Di Supabase Dashboard, buka Storage
+   - Buat bucket baru dengan nama `products`
+   - Set sebagai public bucket
+
+4. **Setup Authentication**
+   - Di Authentication > Settings, konfigurasikan pengaturan auth
+   - Pastikan email confirmation sesuai kebutuhan
+
+### Setup Project
+
 1. **Install Dependencies**
    Jalankan perintah berikut:
 
@@ -125,11 +156,11 @@ chore/update-eslint
    npm install
    ```
 
-2. **Migrasi Database (Prisma)**
-   Jalankan migrasi agar database sesuai dengan schema:
+2. **Push Database Schema**
+   Push schema ke Supabase database:
 
    ```bash
-   npx prisma migrate dev --name init
+   npx prisma db push
    ```
 
 3. **Menjalankan Project**
@@ -147,7 +178,11 @@ chore/update-eslint
    ```
 
 5. **Testing**
-   (Tambahkan instruksi testing jika sudah tersedia)
+   Jalankan test suite:
+
+   ```bash
+   npm test
+   ```
 
 ---
 

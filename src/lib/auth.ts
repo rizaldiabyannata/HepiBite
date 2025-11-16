@@ -1,73 +1,151 @@
-import { cookies } from 'next/headers';
-import { NextResponse } from 'next/server';
-import { SignJWT, jwtVerify } from 'jose';
+import { supabase } from './supabase';
+import type { User, Session } from '@supabase/supabase-js';
 
-export const AUTH_COOKIE_NAME = 'auth_token';
-const alg = 'HS256';
-
-export function getSecret(): Uint8Array {
-  const secret = process.env.AUTH_SECRET;
-  if (!secret) {
-    throw new Error('AUTH_SECRET is not set');
-  }
-  return new TextEncoder().encode(secret);
-}
-
-export type JwtPayload = {
-  sub: string; // admin id as string
+export type AuthUser = {
+  id: string;
   email: string;
   role: 'ADMIN' | 'SUPER_ADMIN';
 };
 
-export async function signToken(payload: JwtPayload, expiresIn = '7d') {
-  const iat = Math.floor(Date.now() / 1000);
-  const exp = iat + parseExpiry(expiresIn);
-  return await new SignJWT({ ...payload, iat, exp })
-    .setProtectedHeader({ alg })
-    .setIssuedAt(iat)
-    .setExpirationTime(exp)
-    .sign(getSecret());
-}
-
-export async function verifyToken(token: string): Promise<JwtPayload | null> {
+// Get current authenticated user from Supabase session
+export async function getCurrentUser(): Promise<AuthUser | null> {
   try {
-    const { payload } = await jwtVerify(token, getSecret());
-    const { sub, email, role } = payload as any;
-    if (!sub || !email || !role) return null;
-    return { sub: String(sub), email: String(email), role: role as any };
+    const { data: { session }, error } = await supabase.auth.getSession();
+    if (error || !session?.user) {
+      return null;
+    }
+
+    return extractUserFromSession(session);
   } catch {
     return null;
   }
 }
 
-export function setAuthCookieOnResponse(res: NextResponse, token: string) {
-  const oneWeek = 7 * 24 * 60 * 60;
-  res.cookies.set(AUTH_COOKIE_NAME, token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: oneWeek,
-  });
+// Extract user information from Supabase session
+function extractUserFromSession(session: Session): AuthUser {
+  const user = session.user;
+  const role = (user.user_metadata?.role as 'ADMIN' | 'SUPER_ADMIN') || 'ADMIN';
+
+  return {
+    id: user.id,
+    email: user.email!,
+    role
+  };
 }
 
-export function clearAuthCookieOnResponse(res: NextResponse) {
-  res.cookies.set(AUTH_COOKIE_NAME, '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 0,
+// Sign in with email and password
+export async function signInWithPassword(email: string, password: string) {
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email,
+    password
   });
+
+  if (error) throw error;
+
+  return {
+    user: data.user ? extractUserFromSession(data.session!) : null,
+    session: data.session
+  };
+}
+
+// Sign up new user
+export async function signUp(email: string, password: string, metadata?: Record<string, any>) {
+  const { data, error } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      data: metadata
+    }
+  });
+
+  if (error) throw error;
+
+  return {
+    user: data.user && data.session ? extractUserFromSession(data.session) : null,
+    session: data.session
+  };
+}
+
+// Sign out
+export async function signOut() {
+  const { error } = await supabase.auth.signOut();
+  if (error) throw error;
+}
+
+// Get current session
+export async function getSession() {
+  const { data: { session }, error } = await supabase.auth.getSession();
+  if (error) throw error;
+  return session;
+}
+
+// Listen to auth state changes
+export function onAuthStateChange(callback: (event: string, session: Session | null) => void) {
+  return supabase.auth.onAuthStateChange(callback);
+}
+
+// Update user metadata
+export async function updateUser(updates: { data?: Record<string, any> }) {
+  const { data, error } = await supabase.auth.updateUser(updates);
+  if (error) throw error;
+  return data;
+}
+
+// Verify user authentication using Supabase session
+export async function verifyToken(token?: string): Promise<AuthUser | null> {
+  // If token provided, try to set it as session (for backward compatibility)
+  if (token) {
+    try {
+      const { data, error } = await supabase.auth.setSession({
+        access_token: token,
+        refresh_token: '' // Refresh token not available in old format
+      });
+      if (!error && data.session) {
+        const user = data.session.user;
+        const role = (user.user_metadata?.role as 'ADMIN' | 'SUPER_ADMIN') || 'ADMIN';
+        return {
+          id: user.id,
+          email: user.email!,
+          role
+        };
+      }
+    } catch {
+      // Fall back to current session
+    }
+  }
+
+  return getCurrentUser();
+}
+
+// Sign token (for backward compatibility - returns access token)
+export async function signToken(payload: AuthUser, expiresIn = '7d'): Promise<string> {
+  // This is kept for backward compatibility during migration
+  // In full Supabase implementation, this won't be needed
+  return `supabase-auth-${payload.id}`;
+}
+
+// Set auth cookie (Supabase handles this automatically)
+export function setAuthCookieOnResponse(res: any, token: string) {
+  // Supabase handles session cookies automatically
+  // This is kept for backward compatibility
+}
+
+// Clear auth cookies by signing out from Supabase
+export async function clearAuthCookieOnResponse(res: any) {
+  await supabase.auth.signOut();
 }
 
 export async function getAuthCookie(): Promise<string | null> {
-  const store = await cookies();
-  return store.get(AUTH_COOKIE_NAME)?.value ?? null;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    return session?.access_token || null;
+  } catch {
+    return null;
+  }
 }
 
+// Legacy function for backward compatibility
 export function parseExpiry(input: string): number {
-  // Supports s, m, h, d
   const match = input.match(/^(\d+)([smhd])$/);
   if (!match) return 7 * 24 * 60 * 60;
   const value = Number(match[1]);
@@ -82,6 +160,8 @@ export function parseExpiry(input: string): number {
     case 'd':
       return value * 86400;
   }
-  // This part is unreachable because the regex guarantees the unit is one of s, m, h, d
   return 7 * 24 * 60 * 60;
 }
+
+// Legacy constants for backward compatibility
+export const AUTH_COOKIE_NAME = 'sb-access-token'; // Supabase's cookie name

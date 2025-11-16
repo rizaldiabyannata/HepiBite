@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifyToken, AUTH_COOKIE_NAME } from '@/lib/auth';
+import { createClient } from '@/lib/supabase/middleware';
 
 // Protect specific API routes/methods:
 // - /api/admins/* (all methods)
@@ -20,24 +20,29 @@ export async function middleware(req: NextRequest) {
   // Always allow auth API endpoints without checks
   if (isAuthApi) return NextResponse.next();
 
-  // Read token once (applies to both API + page checks)
-  const token = req.cookies.get(AUTH_COOKIE_NAME)?.value;
-  const payload = token ? await verifyToken(token) : null;
+  // Create Supabase middleware client and response
+  const { supabase, response } = await createClient(req);
+
+  // IMPORTANT: You *must* call getUser() or getSession() here to ensure
+  // the auth cookies are refreshed if needed
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
   // If hitting login page while authenticated -> redirect to dashboard
-  if (isLoginPage && payload) {
+  if (isLoginPage && user) {
     return NextResponse.redirect(new URL('/admin/dashboard', req.url));
   }
 
   // Protect admin pages (SSR / RSC) - redirect to /login if not authenticated
-  if (isAdminPage && !payload) {
+  if (isAdminPage && !user) {
     const url = new URL('/login', req.url);
     url.searchParams.set('next', pathname); // preserve intended destination
     return NextResponse.redirect(url);
   }
 
   // Non-API paths (other pages) -> allow
-  if (!isApi) return NextResponse.next();
+  if (!isApi) return response;
 
   // Decide if this API request should be protected
   const protectApi =
@@ -49,14 +54,14 @@ export async function middleware(req: NextRequest) {
     (pathname.startsWith('/api/products') && method !== 'GET') ||
     pathname.startsWith('/api/orders');
 
-  if (!protectApi) return NextResponse.next();
+  if (!protectApi) return response;
 
-  if (!payload) {
+  if (!user) {
     // Return JSON for API unauthorized
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  return NextResponse.next();
+  return response;
 }
 
 export const config = {

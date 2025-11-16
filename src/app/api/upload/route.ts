@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
-import { isMinioEnabled, uploadToMinio } from "@/lib/minio";
+import { isStorageEnabled, uploadToStorage } from "@/lib/storage";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME = ["image/jpeg", "image/png", "image/webp", "image/gif"];
@@ -30,13 +30,16 @@ export async function POST(request: Request) {
     const extFromType = mime === "image/jpeg" ? ".jpg" : mime === "image/png" ? ".png" : mime === "image/webp" ? ".webp" : mime === "image/gif" ? ".gif" : mime === "image/svg+xml" ? ".svg" : "";
     const filename = `${Date.now()}-${Math.random().toString(36).slice(2)}${extFromType}`;
 
-    // If MinIO is configured, upload there and return public URL constructed from MINIO_PUBLIC_URL or MINIO_ENDPOINT
-    if (isMinioEnabled()) {
+    // If Supabase Storage is configured, upload there
+    if (isStorageEnabled()) {
       try {
-        const url = await uploadToMinio(buffer, filename, mime);
+        const url = await uploadToStorage(buffer, filename, mime);
+        console.log(`✅ Uploaded to Supabase Storage: ${url}`);
         return NextResponse.json({ url }, { status: 201 });
-      } catch (err) {
-        console.error("MinIO upload failed, falling back to local storage:", err);
+      } catch (err: any) {
+        console.error("❌ Supabase Storage upload failed:", err.message || err);
+        console.error("Full error:", err);
+        console.warn("⚠️  Falling back to local storage...");
         // fall through to local fallback
       }
     }
