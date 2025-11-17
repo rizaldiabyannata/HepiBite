@@ -51,8 +51,8 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith('/api/categories') ||
     pathname.startsWith('/api/deliveries') ||
     pathname.startsWith('/api/vouchers') ||
-    (pathname.startsWith('/api/products') && method !== 'GET') ||
-    pathname.startsWith('/api/orders');
+    (pathname.startsWith('/api/products') && method !== 'GET')
+    ;
 
   if (!protectApi) return response;
 
