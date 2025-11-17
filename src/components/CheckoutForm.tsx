@@ -134,9 +134,7 @@ export default function CheckoutForm() {
           </div>
           <div className="w-full flex justify-between font-bold text-lg">
             <span>Total</span>
-            <span>
-              Rp{(subtotal + (subtotal > 0 ? 10000 : 0)).toLocaleString()}
-            </span>
+            <span>Rp{subtotal.toLocaleString()}</span>
           </div>
         </CardFooter>
       </Card>
