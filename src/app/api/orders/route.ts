@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { createOrderSchema, CreateOrderDetail } from '@/lib/validation';
 import { randomBytes } from 'crypto';
-import { sendWhatsAppMessage } from '@/lib/gowa';
 import { calculatePoDeliveryDate } from '@/lib/po-logic';
 /**
  * @openapi
@@ -296,7 +295,6 @@ ${productList}
         const groupId = process.env.GOWA_GROUP_ID;
         if (groupId) {
           try {
-            await sendWhatsAppMessage(groupId, groupMessage);
           } catch (e) {
             console.error('Failed to send order notification to admin group:', e);
           }
@@ -325,7 +323,6 @@ ${productList}
               customerMessage += `\n\nPembayaran akan dilakukan saat pengiriman (COD).`;
             }
 
-            await sendWhatsAppMessage(deliveryInfo.recipientPhone, customerMessage);
           } catch (e) {
             console.error('Failed to send order notification to customer:', e);
           }

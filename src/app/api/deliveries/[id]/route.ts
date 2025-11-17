@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { updateDeliverySchema } from '@/lib/validation';
-import { sendWhatsAppMessage } from '@/lib/gowa';
 
 /**
  * @openapi
@@ -106,7 +105,6 @@ export async function PUT(request: NextRequest, context: { params: Promise<{ id:
       }
 
       if (message) {
-        await sendWhatsAppMessage(recipientPhone, message);
       }
     }
 
